@@ -94,8 +94,62 @@ const createChatSession = (user1_id, user2_id) => {
 };
 
 
+const endChatSession = (user1_id, user2_id) => {
+  return new Promise((resolve, reject) => {
+    // Update the most recent open session for these two users
+    // Assumes there's only one active session between two users at a time
+    const sql = `
+      UPDATE sessions
+      SET end_time = CURRENT_TIMESTAMP
+      WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?))
+      AND end_time IS NULL
+      ORDER BY start_time DESC
+      LIMIT 1
+    `;
+    // SQLite doesn't directly support LIMIT in UPDATE for older versions through some drivers.
+    // A safer way is to find the session ID first.
+    // For now, this simpler query might work or needs adjustment if errors occur.
+    // Alternative: Find rowid of the session first, then update by rowid.
+
+    // Safer approach: Find the ID of the latest open session
+    const findSql = `
+        SELECT id FROM sessions
+        WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?))
+        AND end_time IS NULL
+        ORDER BY start_time DESC
+        LIMIT 1
+    `;
+
+    db.get(findSql, [user1_id, user2_id, user2_id, user1_id], (err, row) => {
+        if (err) {
+            console.error('Error finding active session to end:', err.message);
+            return reject(err);
+        }
+        if (row) {
+            const updateSql = 'UPDATE sessions SET end_time = CURRENT_TIMESTAMP WHERE id = ?';
+            db.run(updateSql, [row.id], function(updateErr) {
+                if (updateErr) {
+                    console.error('Error updating session end_time:', updateErr.message);
+                    return reject(updateErr);
+                }
+                if (this.changes > 0) {
+                    console.log(`Chat session ID ${row.id} ended for users ${user1_id} and ${user2_id}`);
+                } else {
+                    console.warn(`No session found or already ended for users ${user1_id}, ${user2_id} with session ID ${row.id}`);
+                }
+                resolve(this.changes > 0);
+            });
+        } else {
+            console.warn(`No active session found to end for users ${user1_id} and ${user2_id}`);
+            resolve(false); // No open session found
+        }
+    });
+  });
+};
+
 module.exports = {
     findMatch,
-    createChatSession
+    createChatSession,
+    endChatSession // Added
 };
-console.log('src/services/matchingService.js created.');
+// console.log('src/services/matchingService.js created.'); // Keep original or remove if noisy

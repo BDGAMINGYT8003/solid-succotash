@@ -41,13 +41,13 @@ const newCommand = async (ctx) => {
             // Notify both users
             // Current user
             await ctx.telegram.sendMessage(currentUser.chat_id,
-                `🎉 You've been matched with a ${partnerUser.gender}, aged ${partnerUser.age}. Say hi!`,
+                `🎉 You've been matched with a ${partnerUser.gender}, aged ${partnerUser.age}. Approximate location: [General Area]. Say hi!`,
                 inChatMenuKeyboard
             );
             // Partner user
             // Need to ensure we can send a message to partnerUser.chat_id via bot instance
             await ctx.telegram.sendMessage(partnerUser.chat_id,
-                `🎉 You've been matched with a ${currentUser.gender}, aged ${currentUser.age}. Say hi!`,
+                `🎉 You've been matched with a ${currentUser.gender}, aged ${currentUser.age}. Approximate location: [General Area]. Say hi!`,
                 inChatMenuKeyboard
             );
 

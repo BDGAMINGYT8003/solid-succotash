@@ -1,10 +1,8 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Define the path to the database file within the 'db' directory
 const dbPath = path.resolve(__dirname, '../../db/chat_bot.sqlite');
 
-// Initialize the database connection
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
@@ -20,19 +18,19 @@ function initializeDatabase() {
     // Create users table
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,                         -- Telegram User ID
-        chat_id INTEGER UNIQUE NOT NULL,                -- Telegram Chat ID
+        id INTEGER PRIMARY KEY,
+        chat_id INTEGER UNIQUE NOT NULL,
         onboarding_complete BOOLEAN DEFAULT FALSE,
         gender TEXT,
         age INTEGER,
         latitude REAL,
         longitude REAL,
-        interested_in TEXT,                             -- 'Male', 'Female', 'Both'
-        status TEXT DEFAULT 'idle',                     -- 'idle', 'waiting', 'in_chat'
-        partner_id INTEGER,                             -- Telegram User ID of the matched partner
-        reputation INTEGER DEFAULT 5,                   -- User's reputation score
-        warnings INTEGER DEFAULT 0,                     -- Number of warnings received
-        banned_until DATETIME,                          -- Timestamp until which the user is banned
+        interested_in TEXT,
+        status TEXT DEFAULT 'idle',
+        partner_id INTEGER,
+        reputation INTEGER DEFAULT 5,
+        warnings INTEGER DEFAULT 0,
+        banned_until DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -41,7 +39,6 @@ function initializeDatabase() {
         console.error('Error creating users table:', err.message);
       } else {
         console.log('Users table created or already exists.');
-        // Create indexes for frequently queried columns
         db.run('CREATE INDEX IF NOT EXISTS idx_user_status ON users (status);', idxErr => {
           if (idxErr) console.error('Error creating index idx_user_status:', idxErr.message);
         });
@@ -70,6 +67,25 @@ function initializeDatabase() {
       }
     });
 
+    // Create reports table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reporter_id INTEGER NOT NULL,
+        reported_id INTEGER NOT NULL,
+        reason TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (reporter_id) REFERENCES users(id),
+        FOREIGN KEY (reported_id) REFERENCES users(id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating reports table:', err.message);
+      } else {
+        console.log('Reports table created or already exists.');
+      }
+    });
+
     // Add triggers for updated_at in users table
     db.run(`
       CREATE TRIGGER IF NOT EXISTS update_users_updated_at
@@ -85,15 +101,10 @@ function initializeDatabase() {
         console.log('Trigger for users updated_at created or already exists.');
       }
     });
-
   });
 }
 
-// Export the database connection and initialization function (optional, based on usage)
 module.exports = { db, initializeDatabase };
 
-// Log to confirm file creation
-console.log('src/database/database.js created successfully.');
-
-// Attempt to run the script to create the database and tables
-// node src/database/database.js // This line will be executed by the next bash command
+// console.log('src/database/database.js updated with reports table.'); // Optional: keep for confirmation
+// node src/database/database.js // Re-running can be done once after all schema changes if preferred
